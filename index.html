@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panini FIFA World Cup 2026 — Adrenalyn XL Tracker</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --muted: #666;
+      --border: #e0e0e0;
+      --owned-bg: #e6f4ea;
+      --owned-fg: #0a7a2f;
+      --pos-gk: #7a3fb2;
+      --pos-def: #d33a3a;
+      --pos-mid: #e6811a;
+      --pos-fwd: #2ea150;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121212;
+        --fg: #eaeaea;
+        --muted: #999;
+        --border: #333;
+        --owned-bg: #14361f;
+        --owned-fg: #7fd394;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+    header { padding: 1rem; border-bottom: 1px solid var(--border); }
+    header h1 { margin: 0 0 .25rem; font-size: 1.1rem; }
+    .overall { font-size: 2rem; font-weight: 700; }
+    .overall .pct { font-size: 1rem; color: var(--muted); margin-left: .5rem; }
+    .bar { height: 6px; background: var(--border); border-radius: 3px; margin-top: .5rem; overflow: hidden; }
+    .bar > div { height: 100%; background: var(--owned-fg); transition: width .2s; }
+    main { display: grid; grid-template-columns: 300px 1fr; gap: 1rem; padding: 1rem; }
+    @media (max-width: 700px) { main { grid-template-columns: 1fr; } }
+    #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: .5rem; }
+    .tile {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: .5rem;
+      font-size: .8rem;
+      cursor: pointer;
+      user-select: none;
+      opacity: .55;
+      background: var(--bg);
+    }
+    .tile.owned { opacity: 1; background: var(--owned-bg); border-color: var(--owned-fg); }
+    .tile .num { font-weight: 700; }
+    .tile .name { display: block; margin-top: .25rem; }
+    .tile .meta { color: var(--muted); font-size: .7rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Panini FIFA World Cup 2026 — Adrenalyn XL</h1>
+    <div class="overall"><span id="ownedCount">0</span> / 630 <span class="pct" id="ownedPct">0%</span></div>
+    <div class="bar"><div id="overallBar" style="width:0%"></div></div>
+  </header>
+  <main>
+    <aside id="summary"></aside>
+    <section id="grid"></section>
+  </main>
+
+  <script>
+  (async () => {
+    const TOTAL_CARDS = 630;
+    const grid = document.getElementById('grid');
+    const checklist = await fetch('checklist.json').then(r => r.json());
+
+    for (const c of checklist) {
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.dataset.number = c.number;
+      tile.innerHTML =
+        `<span class="num">#${c.number}</span>` +
+        `<span class="name">${c.player}</span>` +
+        `<span class="meta">${c.team || c.section}</span>`;
+      grid.appendChild(tile);
+    }
+  })();
+  </script>
+</body>
+</html>
