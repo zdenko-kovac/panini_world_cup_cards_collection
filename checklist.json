@@ -1,0 +1,32 @@
+[
+  { "number": 1, "team": "ARG", "teamName": "Argentina",   "player": "Messi",           "position": null, "badge": null, "section": "golden" },
+  { "number": 2, "team": "BRA", "teamName": "Brazil",      "player": "Vinícius Júnior", "position": null, "badge": null, "section": "golden" },
+  { "number": 3, "team": "EGY", "teamName": "Egypt",       "player": "Salah",           "position": null, "badge": null, "section": "golden" },
+  { "number": 4, "team": "ENG", "teamName": "England",     "player": "Kane",            "position": null, "badge": null, "section": "golden" },
+  { "number": 5, "team": "FRA", "teamName": "France",      "player": "Mbappé",          "position": null, "badge": null, "section": "golden" },
+  { "number": 6, "team": "KOR", "teamName": "South Korea", "player": "Son",             "position": null, "badge": null, "section": "golden" },
+  { "number": 7, "team": "NOR", "teamName": "Norway",      "player": "Haaland",         "position": null, "badge": null, "section": "golden" },
+  { "number": 8, "team": "POR", "teamName": "Portugal",    "player": "Ronaldo",         "position": null, "badge": null, "section": "golden" },
+  { "number": 9, "team": "ESP", "teamName": "Spain",       "player": "Yamal",           "position": null, "badge": null, "section": "golden" },
+
+  { "number": 22, "team": "ARG", "teamName": "Argentina", "player": "Julián Álvarez",       "position": "FWD", "badge": "FF", "section": "team" },
+  { "number": 23, "team": "ARG", "teamName": "Argentina", "player": "Team Crest",           "position": null,  "badge": null, "section": "team" },
+  { "number": 24, "team": "ARG", "teamName": "Argentina", "player": "Lionel Messi",         "position": "FWD", "badge": null, "section": "team" },
+  { "number": 25, "team": "ARG", "teamName": "Argentina", "player": "Emiliano Martínez",    "position": "GK",  "badge": "IC", "section": "team" },
+  { "number": 26, "team": "ARG", "teamName": "Argentina", "player": "Nahuel Molina",        "position": "DEF", "badge": null, "section": "team" },
+  { "number": 27, "team": "ARG", "teamName": "Argentina", "player": "Cristian Romero",      "position": "DEF", "badge": null, "section": "team" },
+  { "number": 28, "team": "ARG", "teamName": "Argentina", "player": "Nicolás Otamendi",     "position": "DEF", "badge": null, "section": "team" },
+  { "number": 29, "team": "ARG", "teamName": "Argentina", "player": "Enzo Fernández",       "position": "MID", "badge": null, "section": "team" },
+  { "number": 30, "team": "ARG", "teamName": "Argentina", "player": "Alexis Mac Allister",  "position": "MID", "badge": null, "section": "team" },
+  { "number": 31, "team": "ARG", "teamName": "Argentina", "player": "Rodrigo De Paul",      "position": "MID", "badge": null, "section": "team" },
+  { "number": 32, "team": "ARG", "teamName": "Argentina", "player": "Giuliano Simeone",     "position": "MID", "badge": null, "section": "team" },
+  { "number": 33, "team": "ARG", "teamName": "Argentina", "player": "Lautaro Martínez",     "position": "FWD", "badge": null, "section": "team" },
+
+  { "number": 624, "team": null, "teamName": null, "player": "Official Emblem",         "position": null, "badge": null, "section": "extras" },
+  { "number": 625, "team": null, "teamName": null, "player": "Official Mascot — Maple", "position": null, "badge": null, "section": "extras" },
+  { "number": 626, "team": null, "teamName": null, "player": "Official Mascot — Clutch","position": null, "badge": null, "section": "extras" },
+  { "number": 627, "team": null, "teamName": null, "player": "Official Mascot — Zayu",  "position": null, "badge": null, "section": "extras" },
+  { "number": 628, "team": null, "teamName": null, "player": "Eternos 22 — Defenders",  "position": null, "badge": null, "section": "extras" },
+  { "number": 629, "team": null, "teamName": null, "player": "Eternos 22 — Midfielders","position": null, "badge": null, "section": "extras" },
+  { "number": 630, "team": null, "teamName": null, "player": "Eternos 22 — Forwards",   "position": null, "badge": null, "section": "extras" }
+]

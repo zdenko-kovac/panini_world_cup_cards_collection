@@ -1,0 +1,119 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Panini WC 2026 Tracker — Tests</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 1rem; }
+  .pass { color: #0a7a2f; }
+  .fail { color: #b00020; }
+  pre { background: #f4f4f4; padding: .5rem; overflow-x: auto; white-space: pre-wrap; }
+  h2 { margin-top: 2rem; }
+</style>
+<h1>Panini WC 2026 Tracker — Tests</h1>
+<div id="results"></div>
+<script>
+const results = document.getElementById('results');
+let passed = 0, failed = 0;
+
+function t(name, fn) {
+  try {
+    const r = fn();
+    if (r && typeof r.then === 'function') {
+      return r.then(
+        () => { results.insertAdjacentHTML('beforeend', `<div class="pass">✓ ${name}</div>`); passed++; },
+        (err) => { results.insertAdjacentHTML('beforeend', `<div class="fail">✗ ${name}<pre>${(err && err.stack) || err}</pre></div>`); failed++; }
+      );
+    }
+    results.insertAdjacentHTML('beforeend', `<div class="pass">✓ ${name}</div>`); passed++;
+  } catch (err) {
+    results.insertAdjacentHTML('beforeend', `<div class="fail">✗ ${name}<pre>${(err && err.stack) || err}</pre></div>`);
+    failed++;
+  }
+}
+
+function eq(a, b, msg) {
+  const A = JSON.stringify(a), B = JSON.stringify(b);
+  if (A !== B) throw new Error((msg || 'not equal') + `\n  expected: ${B}\n  actual:   ${A}`);
+}
+
+function ok(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed'); }
+
+// Load pure functions from index.html by fetching and evaluating its FIRST <script> tag.
+// index.html keeps window.__paniniApp in the first <script>, boot IIFE in a later one.
+async function loadAppFunctions() {
+  const html = await fetch('index.html').then(r => r.text());
+  const match = html.match(/<script>([\s\S]*?)<\/script>/);
+  if (!match) throw new Error('no <script> in index.html');
+  eval(match[1]);
+  if (!window.__paniniApp) throw new Error('window.__paniniApp not set — check index.html');
+  return window.__paniniApp;
+}
+
+async function main() {
+  const checklist = await fetch('checklist.json').then(r => r.json());
+
+  results.insertAdjacentHTML('beforeend', '<h2>checklist.json shape</h2>');
+
+  // Pilot mode: total may be less than 630 during backfill.
+  // The "== 630" assertion is flipped on when backfill is complete (see post-pilot task).
+  t('has at least 1 entry and at most 630', () => {
+    ok(checklist.length >= 1 && checklist.length <= 630,
+       `unexpected length: ${checklist.length}`);
+  });
+
+  t('card numbers are unique and within 1..630', () => {
+    const seen = new Set();
+    for (const c of checklist) {
+      ok(Number.isInteger(c.number), `#${c.number} not integer`);
+      ok(c.number >= 1 && c.number <= 630, `#${c.number} out of range`);
+      ok(!seen.has(c.number), `#${c.number} duplicated`);
+      seen.add(c.number);
+    }
+  });
+
+  t('every card has required fields', () => {
+    for (const c of checklist) {
+      ok(typeof c.number === 'number', `#${c.number} number missing`);
+      ok(typeof c.player === 'string' && c.player.length > 0, `#${c.number} player missing`);
+      ok(typeof c.section === 'string', `#${c.number} section missing`);
+    }
+  });
+
+  t('position enum is legal', () => {
+    const legal = new Set(['GK', 'DEF', 'MID', 'FWD', null]);
+    for (const c of checklist) ok(legal.has(c.position), `#${c.number} bad position: ${c.position}`);
+  });
+
+  t('badge enum is legal', () => {
+    const legal = new Set(['FF', 'IC', null]);
+    for (const c of checklist) ok(legal.has(c.badge), `#${c.number} bad badge: ${c.badge}`);
+  });
+
+  t('section enum is legal', () => {
+    const legal = new Set([
+      'golden', 'team', 'contenders', 'goalMachines', 'topKeepers',
+      'defensiveRocks', 'midfieldMaestros', 'masterRookies', 'extras',
+    ]);
+    for (const c of checklist) ok(legal.has(c.section), `#${c.number} bad section: ${c.section}`);
+  });
+
+  t('team ↔ teamName both null or both non-null', () => {
+    for (const c of checklist) {
+      const aNull = c.team === null || c.team === undefined;
+      const bNull = c.teamName === null || c.teamName === undefined;
+      ok(aNull === bNull, `#${c.number} team/teamName mismatch`);
+    }
+  });
+
+  t('golden section (present pilot subset) has valid numbers 1..9', () => {
+    const golden = checklist.filter(c => c.section === 'golden').map(c => c.number);
+    for (const n of golden) ok(n >= 1 && n <= 9, `golden card #${n} out of 1..9`);
+  });
+
+  results.insertAdjacentHTML('beforeend',
+    `<h2>${failed === 0 ? '✅' : '❌'} ${passed} passed, ${failed} failed</h2>`);
+}
+
+main().catch(err => {
+  results.insertAdjacentHTML('beforeend', `<div class="fail">FATAL: ${err && err.stack || err}</div>`);
+});
+</script>
