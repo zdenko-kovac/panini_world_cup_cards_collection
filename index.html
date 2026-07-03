@@ -183,6 +183,32 @@
       }
       return lines.join('\n');
     },
+
+    applyImport(existing, imported, mode) {
+      const normalized = {};
+      if (Array.isArray(imported)) {
+        for (const n of imported) {
+          if (typeof n !== 'number' || n < 1 || n > 630) continue;
+          normalized[n] = (normalized[n] || 0) + 1;
+        }
+      } else if (imported && typeof imported === 'object') {
+        for (const [k, v] of Object.entries(imported)) {
+          const n = parseInt(k, 10);
+          const c = typeof v === 'number' ? v : parseInt(v, 10);
+          if (!Number.isFinite(n) || n < 1 || n > 630) continue;
+          if (!Number.isFinite(c) || c < 1) continue;
+          normalized[n] = c;
+        }
+      }
+
+      if (mode === 'replace') return normalized;
+
+      const out = { ...existing };
+      for (const [k, v] of Object.entries(normalized)) {
+        out[k] = (out[k] || 0) + v;
+      }
+      return out;
+    },
   };
 </script>
 

@@ -306,6 +306,48 @@ async function main() {
     eq(out, 'Doubles (0):');
   });
 
+  results.insertAdjacentHTML('beforeend', '<h2>applyImport</h2>');
+
+  t('array form → each becomes count 1 (replace mode)', () => {
+    const r = app.applyImport({}, [1, 15, 22], 'replace');
+    eq(r, { "1": 1, "15": 1, "22": 1 });
+  });
+
+  t('object form → passthrough (replace mode)', () => {
+    const r = app.applyImport({ "99": 5 }, { "1": 2, "15": 1 }, 'replace');
+    eq(r, { "1": 2, "15": 1 });
+  });
+
+  t('merge mode adds counts on top of existing', () => {
+    const r = app.applyImport({ "1": 1, "2": 1 }, { "1": 2, "3": 1 }, 'merge');
+    eq(r, { "1": 3, "2": 1, "3": 1 });
+  });
+
+  t('merge mode with array form adds 1 to each', () => {
+    const r = app.applyImport({ "1": 2 }, [1, 2], 'merge');
+    eq(r, { "1": 3, "2": 1 });
+  });
+
+  t('ignores out-of-range numbers silently', () => {
+    const r = app.applyImport({}, { "9999": 3, "0": 2, "5": 1 }, 'replace');
+    eq(r, { "5": 1 });
+  });
+
+  t('ignores zero/negative counts in imported object', () => {
+    const r = app.applyImport({}, { "1": 0, "2": -1, "3": 1 }, 'replace');
+    eq(r, { "3": 1 });
+  });
+
+  t('array items outside 1..630 are skipped', () => {
+    const r = app.applyImport({}, [1, 0, 631, 700, 5], 'replace');
+    eq(r, { "1": 1, "5": 1 });
+  });
+
+  t('array with duplicates increments the same key', () => {
+    const r = app.applyImport({}, [5, 5, 5], 'replace');
+    eq(r, { "5": 3 });
+  });
+
   results.insertAdjacentHTML('beforeend',
     `<h2>${failed === 0 ? '✅' : '❌'} ${passed} passed, ${failed} failed</h2>`);
 }
