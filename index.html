@@ -664,7 +664,15 @@
       }
       const row = e.target.closest('.summary-row');
       if (!row) return;
-      filter = { kind: row.dataset.kind, value: row.dataset.value };
+      const kind = row.dataset.kind;
+      const value = row.dataset.value;
+      // Click again on the active row → clear filter (toggle off).
+      if (filter.kind === kind && filter.value === value) {
+        filter = { kind: 'all', value: null };
+        renderAll();
+        return;
+      }
+      filter = { kind, value };
       renderAll();
       document.getElementById('grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
