@@ -125,6 +125,60 @@
     }
     .chip:hover { background: rgba(127,127,127,.1); }
     .chip.active { background: var(--owned-fg); color: white; border-color: var(--owned-fg); }
+    #exportMenu { position: relative; }
+    #exportMenu > summary {
+      list-style: none; cursor: pointer;
+      padding: .3rem .6rem; border: 1px solid var(--border); border-radius: 4px;
+      font-size: .8rem; user-select: none;
+    }
+    #exportMenu > summary::-webkit-details-marker { display: none; }
+    #exportMenu ul {
+      position: absolute; right: 0; top: 100%;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+      list-style: none; margin: .2rem 0 0; padding: .25rem;
+      z-index: 10; min-width: 160px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    }
+    #exportMenu li { list-style: none; }
+    #exportMenu li button {
+      display: block; width: 100%; text-align: left;
+      padding: .3rem .5rem;
+      background: transparent; color: var(--fg);
+      border: 0; border-radius: 4px;
+      cursor: pointer; font: inherit; font-size: .8rem;
+    }
+    #exportMenu li button:hover { background: rgba(127,127,127,.1); }
+    .import-lbl {
+      cursor: pointer;
+      padding: .3rem .6rem; border: 1px solid var(--border); border-radius: 4px;
+      font-size: .8rem;
+    }
+    .import-lbl:hover { background: rgba(127,127,127,.1); }
+    dialog {
+      max-width: 90vw; padding: 1rem;
+      background: var(--bg); color: var(--fg);
+      border: 1px solid var(--border); border-radius: 8px;
+    }
+    dialog::backdrop { background: rgba(0,0,0,.4); }
+    dialog h3 { margin: 0 0 .5rem; font-size: 1rem; }
+    dialog textarea {
+      width: 100%; font-family: ui-monospace, monospace; font-size: .85rem;
+      background: var(--bg); color: var(--fg);
+      border: 1px solid var(--border); border-radius: 4px; padding: .5rem;
+      resize: vertical;
+    }
+    dialog menu {
+      list-style: none; margin: .8rem 0 0; padding: 0;
+      display: flex; gap: .5rem; justify-content: flex-end;
+    }
+    dialog menu button {
+      padding: .3rem .8rem; cursor: pointer; font: inherit;
+      background: var(--bg); color: var(--fg);
+      border: 1px solid var(--border); border-radius: 4px;
+    }
+    dialog menu button:first-child {
+      background: var(--owned-fg); color: white; border-color: var(--owned-fg);
+    }
   </style>
 </head>
 <body>
@@ -146,6 +200,18 @@
       <button type="button" class="chip" data-chip="missing">Missing</button>
       <button type="button" class="chip" data-chip="doubles">Doubles</button>
     </div>
+    <details id="exportMenu" class="menu">
+      <summary>Export ▾</summary>
+      <ul>
+        <li><button type="button" data-export="json">JSON backup</button></li>
+        <li><button type="button" data-export="missing">Missing list</button></li>
+        <li><button type="button" data-export="doubles">Doubles list</button></li>
+      </ul>
+    </details>
+    <label class="import-lbl">
+      Import
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </label>
   </div>
   <main>
     <aside id="summary"></aside>
@@ -607,9 +673,101 @@
       showToast('+' + valid.length + ' card' + (valid.length > 1 ? 's' : '') + ' added');
     });
 
+    // ==== Export / Import ====
+    const modal = document.getElementById('textModal');
+    const modalBody = document.getElementById('textModalBody');
+    const modalTitle = document.getElementById('textModalTitle');
+
+    function openTextModal(title, body) {
+      modalTitle.textContent = title;
+      modalBody.value = body;
+      if (typeof modal.showModal === 'function') modal.showModal();
+      else modal.setAttribute('open', '');
+      modalBody.focus();
+      modalBody.select();
+    }
+
+    function closeTextModal() {
+      if (typeof modal.close === 'function') modal.close();
+      else modal.removeAttribute('open');
+    }
+
+    document.getElementById('exportMenu').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-export]');
+      if (!b) return;
+      const kind = b.dataset.export;
+
+      if (kind === 'json') {
+        const blob = new Blob([JSON.stringify(collection, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const date = new Date().toISOString().slice(0, 10);
+        a.download = 'panini-collection-' + date + '.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        showToast('Downloaded ' + a.download);
+      } else if (kind === 'missing') {
+        openTextModal('Missing cards', app.formatMissingList(checklist, collection));
+      } else if (kind === 'doubles') {
+        openTextModal('Doubles', app.formatDoublesList(checklist, collection));
+      }
+
+      document.getElementById('exportMenu').open = false;
+    });
+
+    document.getElementById('textModalCopy').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      try {
+        await navigator.clipboard.writeText(modalBody.value);
+      } catch (_) {
+        modalBody.select();
+        try { document.execCommand('copy'); } catch (_) { /* fallback failed too, silent */ }
+      }
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    });
+
+    document.getElementById('textModalClose').addEventListener('click', closeTextModal);
+
+    const importFile = document.getElementById('importFile');
+    importFile.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      let text, parsed;
+      try {
+        text = await file.text();
+        parsed = JSON.parse(text);
+      } catch (_) {
+        alert('Import failed: not valid JSON.');
+        e.target.value = '';
+        return;
+      }
+      const merge = window.confirm(
+        'OK = Merge (add counts on top of existing)\n' +
+        'Cancel = Replace (wipe first, then apply)'
+      );
+      collection = app.applyImport(collection, parsed, merge ? 'merge' : 'replace');
+      app.saveCollection(collection);
+      renderAll();
+      showToast('Import applied');
+      e.target.value = '';
+    });
+
     renderAll();
   })();
   </script>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="textModal">
+    <h3 id="textModalTitle"></h3>
+    <textarea id="textModalBody" rows="18" cols="60" readonly></textarea>
+    <menu>
+      <button id="textModalCopy" type="button">Copy</button>
+      <button id="textModalClose" type="button">Close</button>
+    </menu>
+  </dialog>
 </body>
 </html>
