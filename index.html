@@ -53,6 +53,35 @@
     .tile .name { display: block; margin-top: .25rem; }
     .tile .meta { color: var(--muted); font-size: .7rem; }
     .tile .dup { color: var(--muted); font-size: .7rem; margin-left: .2rem; font-weight: normal; }
+    #toolbar {
+      position: sticky; top: 0; z-index: 5;
+      background: var(--bg); border-bottom: 1px solid var(--border);
+      padding: .5rem 1rem; display: flex; gap: 1rem; align-items: center;
+      flex-wrap: wrap;
+    }
+    #quickAddForm { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+    #quickAddForm input {
+      padding: .3rem .5rem; font: inherit; color: var(--fg);
+      background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+      min-width: 220px;
+    }
+    #quickAddForm button {
+      padding: .3rem .8rem; cursor: pointer;
+      background: var(--owned-fg); color: white; border: 0; border-radius: 4px;
+    }
+    #quickAddForm button:hover { filter: brightness(1.05); }
+    #quickAddForm .err { color: #b00020; font-size: .8rem; }
+    @media (prefers-color-scheme: dark) {
+      #quickAddForm .err { color: #f5b7bd; }
+    }
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+      background: var(--owned-fg); color: white;
+      padding: .5rem 1rem; border-radius: 4px;
+      opacity: 0; transition: opacity .3s;
+      pointer-events: none; z-index: 20;
+    }
+    .toast.show { opacity: 1; }
   </style>
 </head>
 <body>
@@ -61,6 +90,13 @@
     <div class="overall"><span id="ownedCount">0</span> / <span id="ownedTotal">0</span> <span class="pct" id="ownedPct">0%</span></div>
     <div class="bar"><div id="overallBar" style="width:0%"></div></div>
   </header>
+  <div id="toolbar">
+    <form id="quickAddForm">
+      <input id="quickAdd" type="text" placeholder="Add cards: 10, 15, 22-25" autocomplete="off" spellcheck="false">
+      <button type="submit">Add</button>
+      <span id="quickAddError" class="err" role="status" aria-live="polite"></span>
+    </form>
+  </div>
   <main>
     <aside id="summary"></aside>
     <section id="grid"></section>
@@ -321,8 +357,42 @@
       toggle(parseInt(tile.dataset.number, 10));
     });
 
+    const form = document.getElementById('quickAddForm');
+    const input = document.getElementById('quickAdd');
+    const errEl = document.getElementById('quickAddError');
+    const toastEl = document.getElementById('toast');
+    let toastTimer = null;
+    let toastHideTimer = null;
+
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.hidden = false;
+      // Force a reflow so the transition fires when we add the class.
+      void toastEl.offsetWidth;
+      toastEl.classList.add('show');
+      if (toastTimer) clearTimeout(toastTimer);
+      if (toastHideTimer) clearTimeout(toastHideTimer);
+      toastTimer = setTimeout(() => {
+        toastEl.classList.remove('show');
+        toastHideTimer = setTimeout(() => { toastEl.hidden = true; }, 300);
+      }, 1500);
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const { valid, errors } = app.parseQuickAdd(input.value);
+      errEl.textContent = errors.length ? 'Rejected: ' + errors.join(', ') : '';
+      if (!valid.length) return;
+      for (const n of valid) collection[n] = (collection[n] || 0) + 1;
+      app.saveCollection(collection);
+      input.value = '';
+      renderAll();
+      showToast('+' + valid.length + ' card' + (valid.length > 1 ? 's' : '') + ' added');
+    });
+
     renderAll();
   })();
   </script>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>
