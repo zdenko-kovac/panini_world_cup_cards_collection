@@ -461,6 +461,13 @@
     matchesSearch(card, query) {
       if (!query || !query.trim()) return true;
       const q = query.trim().toLowerCase();
+      const rangeMatch = q.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (rangeMatch) {
+        const lo = parseInt(rangeMatch[1], 10);
+        const hi = parseInt(rangeMatch[2], 10);
+        if (lo <= hi) return card.number >= lo && card.number <= hi;
+        return false;
+      }
       if (String(card.number) === q) return true;
       if (card.team && card.team.toLowerCase() === q) return true;
       if (card.teamName && card.teamName.toLowerCase().includes(q)) return true;

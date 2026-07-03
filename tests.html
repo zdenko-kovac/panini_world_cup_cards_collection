@@ -395,6 +395,25 @@ async function main() {
     ok(!app.matchesSearch(c, 'argentina'));
   });
 
+  t('matches numeric range "N-M" inclusive', () => {
+    const c = { number: 25, team: 'ARG', teamName: 'Argentina', player: 'Lionel Messi' };
+    ok(app.matchesSearch(c, '20-30'));
+    ok(app.matchesSearch(c, '25-25'));
+    ok(!app.matchesSearch(c, '1-10'));
+    ok(!app.matchesSearch(c, '30-40'));
+  });
+
+  t('range tolerates whitespace around dash', () => {
+    const c = { number: 25, team: 'ARG', teamName: 'Argentina', player: 'Lionel Messi' };
+    ok(app.matchesSearch(c, '20 - 30'));
+    ok(app.matchesSearch(c, '20- 30'));
+  });
+
+  t('rejects reversed range (5-3)', () => {
+    const c = { number: 4, team: 'ARG', teamName: 'Argentina', player: 'Lionel Messi' };
+    ok(!app.matchesSearch(c, '5-3'));
+  });
+
   results.insertAdjacentHTML('beforeend',
     `<h2>${failed === 0 ? '✅' : '❌'} ${passed} passed, ${failed} failed</h2>`);
 }
