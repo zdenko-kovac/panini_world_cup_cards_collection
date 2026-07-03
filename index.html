@@ -489,8 +489,14 @@
       reserved = reserved || {};
       const missing = c => !collection[c.number] || collection[c.number] < 1;
       const { groups, groupOrder } = this._groupByLabel(checklist, missing);
-      const totalMissing = checklist.filter(missing).length;
-      const lines = [`Missing (${totalMissing}):`];
+      const missingCards = checklist.filter(missing);
+      const totalMissing = missingCards.length;
+      const incoming = missingCards.filter(c => reserved[c.number]).length;
+      const stillToFind = totalMissing - incoming;
+      const header = incoming > 0
+        ? `Missing (${totalMissing} / ${stillToFind} still to find):`
+        : `Missing (${totalMissing}):`;
+      const lines = [header];
       for (const label of groupOrder) {
         const parts = groups.get(label).map(n =>
           reserved[n] ? `${n}⇄` : String(n)

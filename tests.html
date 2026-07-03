@@ -318,6 +318,20 @@ async function main() {
     ok(out.includes('Golden Ballers: 1, 3⇄'), 'expected "3⇄" marker in golden section:\n' + out);
   });
 
+  t('missing header shows "N / M still to find" when incoming cards exist', () => {
+    const collection = {};
+    for (const c of checklist) if (c.number !== 1 && c.number !== 3) collection[c.number] = 1;
+    const out = app.formatMissingList(checklist, collection, { "3": 1 });
+    ok(out.startsWith('Missing (2 / 1 still to find):'), 'header wrong: ' + out.split('\n')[0]);
+  });
+
+  t('missing header stays plain when no incoming cards', () => {
+    const collection = {};
+    for (const c of checklist) if (c.number !== 1 && c.number !== 3) collection[c.number] = 1;
+    const out = app.formatMissingList(checklist, collection);
+    ok(out.startsWith('Missing (2):'), 'header wrong: ' + out.split('\n')[0]);
+  });
+
   t('missing list without reserved arg behaves as before', () => {
     const collection = {};
     for (const c of checklist) if (c.number !== 1) collection[c.number] = 1;
