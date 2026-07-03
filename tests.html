@@ -37,14 +37,16 @@ function eq(a, b, msg) {
 
 function ok(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed'); }
 
-// Load pure functions from index.html by fetching and evaluating its FIRST <script> tag.
-// index.html keeps window.__paniniApp in the first <script>, boot IIFE in a later one.
+// Load pure functions from index.html by fetching and evaluating the <script> tag
+// that defines window.__paniniApp. Other <script> tags (theme init, boot IIFE)
+// are skipped so tests.html doesn't accidentally re-run app boot logic.
 async function loadAppFunctions() {
   const html = await fetch('index.html').then(r => r.text());
-  const match = html.match(/<script>([\s\S]*?)<\/script>/);
-  if (!match) throw new Error('no <script> in index.html');
-  eval(match[1]);
-  if (!window.__paniniApp) throw new Error('window.__paniniApp not set — check index.html');
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+  const src = scripts.find(s => s.includes('window.__paniniApp'));
+  if (!src) throw new Error('no <script> defining window.__paniniApp in index.html');
+  eval(src);
+  if (!window.__paniniApp) throw new Error('window.__paniniApp not set after eval — check index.html');
   return window.__paniniApp;
 }
 

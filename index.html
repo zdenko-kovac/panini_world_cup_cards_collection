@@ -1,9 +1,18 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="auto">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Panini FIFA World Cup 2026 — Adrenalyn XL Tracker</title>
+  <script>
+    // Apply saved theme BEFORE CSS parses to avoid a flash of the wrong theme.
+    (function() {
+      try {
+        const t = localStorage.getItem('panini_wc2026_theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (_) { /* storage disabled — stay on auto */ }
+    })();
+  </script>
   <style>
     :root {
       --bg: #ffffff;
@@ -18,7 +27,7 @@
       --pos-fwd: #2ea150;
     }
     @media (prefers-color-scheme: dark) {
-      :root {
+      [data-theme="auto"] {
         --bg: #121212;
         --fg: #eaeaea;
         --muted: #999;
@@ -26,6 +35,14 @@
         --owned-bg: #14361f;
         --owned-fg: #7fd394;
       }
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --fg: #eaeaea;
+      --muted: #999;
+      --border: #333;
+      --owned-bg: #14361f;
+      --owned-fg: #7fd394;
     }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--fg); }
@@ -50,11 +67,20 @@
       min-height: 4.75rem;
       display: flex;
       flex-direction: column;
+      position: relative;
     }
     .tile.owned { opacity: 1; background: var(--owned-bg); border-color: var(--owned-fg); }
     .tile .num { font-weight: 700; }
-    .tile .name { display: block; margin-top: .25rem; }
+    .tile .name { display: block; margin-top: .25rem; padding-right: 1rem; }
     .tile .meta { color: var(--muted); font-size: .7rem; margin-top: auto; }
+    .tile .pos {
+      position: absolute; top: .4rem; right: .4rem;
+      width: .6rem; height: .6rem; border-radius: 2px;
+    }
+    .tile .pos.pos-gk  { background: var(--pos-gk); }
+    .tile .pos.pos-def { background: var(--pos-def); }
+    .tile .pos.pos-mid { background: var(--pos-mid); }
+    .tile .pos.pos-fwd { background: var(--pos-fwd); }
     .tile .dup { color: var(--muted); font-size: .7rem; margin-left: .2rem; font-weight: normal; }
     .banner {
       background: #fff3cd; color: #664d03;
@@ -73,9 +99,11 @@
       cursor: pointer; font: inherit; font-size: .8rem;
     }
     @media (prefers-color-scheme: dark) {
-      .banner { background: #3a2e00; color: #fbe9a0; border-bottom-color: #6b5100; }
-      .banner.error { background: #4a1a1e; color: #f5b7bd; border-bottom-color: #a3444d; }
+      [data-theme="auto"] .banner { background: #3a2e00; color: #fbe9a0; border-bottom-color: #6b5100; }
+      [data-theme="auto"] .banner.error { background: #4a1a1e; color: #f5b7bd; border-bottom-color: #a3444d; }
     }
+    [data-theme="dark"] .banner { background: #3a2e00; color: #fbe9a0; border-bottom-color: #6b5100; }
+    [data-theme="dark"] .banner.error { background: #4a1a1e; color: #f5b7bd; border-bottom-color: #a3444d; }
     #toolbar {
       position: sticky; top: 0; z-index: 5;
       background: var(--bg); border-bottom: 1px solid var(--border);
@@ -95,8 +123,9 @@
     #quickAddForm button:hover { filter: brightness(1.05); }
     #quickAddForm .err { color: #b00020; font-size: .8rem; }
     @media (prefers-color-scheme: dark) {
-      #quickAddForm .err { color: #f5b7bd; }
+      [data-theme="auto"] #quickAddForm .err { color: #f5b7bd; }
     }
+    [data-theme="dark"] #quickAddForm .err { color: #f5b7bd; }
     .toast {
       position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
       background: var(--owned-fg); color: white;
@@ -188,6 +217,15 @@
       font-size: .8rem;
     }
     .import-lbl:hover { background: rgba(127,127,127,.1); }
+    .theme-toggle {
+      cursor: pointer;
+      padding: .3rem .6rem;
+      background: var(--bg); color: var(--fg);
+      border: 1px solid var(--border); border-radius: 4px;
+      font: inherit; font-size: .8rem;
+      min-width: 90px;
+    }
+    .theme-toggle:hover { background: rgba(127,127,127,.1); }
     dialog {
       max-width: 90vw; padding: 1rem;
       background: var(--bg); color: var(--fg);
@@ -247,6 +285,7 @@
       Import
       <input type="file" id="importFile" accept="application/json,.json" hidden>
     </label>
+    <button type="button" id="themeToggle" class="theme-toggle" aria-label="Toggle color theme" title="Toggle theme">🖥 Auto</button>
   </div>
   <main>
     <aside id="summary"></aside>
@@ -510,6 +549,14 @@
       const tile = document.createElement('div');
       tile.className = 'tile' + (owned ? ' owned' : '');
       tile.dataset.number = c.number;
+
+      if (c.position) {
+        const pos = document.createElement('span');
+        pos.className = 'pos pos-' + c.position.toLowerCase();
+        pos.title = c.position;
+        pos.setAttribute('aria-label', c.position);
+        tile.appendChild(pos);
+      }
 
       const num = document.createElement('span');
       num.className = 'num';
@@ -827,6 +874,30 @@
       renderAll();
       showToast('Import applied');
       e.target.value = '';
+    });
+
+    // ==== Theme toggle (auto → light → dark → auto …) ====
+    const themeBtn = document.getElementById('themeToggle');
+    const THEMES = ['auto', 'light', 'dark'];
+    const THEME_LABELS = { auto: '🖥 Auto', light: '☀️ Light', dark: '🌙 Dark' };
+
+    function currentTheme() {
+      const t = document.documentElement.getAttribute('data-theme');
+      return THEMES.includes(t) ? t : 'auto';
+    }
+    function applyTheme(t) {
+      document.documentElement.setAttribute('data-theme', t);
+      themeBtn.textContent = THEME_LABELS[t];
+      try {
+        if (t === 'auto') localStorage.removeItem('panini_wc2026_theme');
+        else localStorage.setItem('panini_wc2026_theme', t);
+      } catch (_) { /* storage disabled */ }
+    }
+    applyTheme(currentTheme());   // sync button label with attribute set by head script
+
+    themeBtn.addEventListener('click', () => {
+      const i = THEMES.indexOf(currentTheme());
+      applyTheme(THEMES[(i + 1) % THEMES.length]);
     });
 
     renderAll();
