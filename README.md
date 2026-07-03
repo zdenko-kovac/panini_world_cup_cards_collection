@@ -3,7 +3,7 @@
 A single-page tracker for the Panini FIFA World Cup 2026 Adrenalyn XL trading-card
 collection (all 630 cards).
 
-**Live:** https://zdenko-kovac.github.io/panini_world_cup_cards_collection/
+**Live:** https://panini-cards.github.io/fifa-wc-2026/
 
 ## Features
 
