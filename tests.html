@@ -218,13 +218,24 @@ async function main() {
     eq(s.owned, 2);
   });
 
-  t('per-team totals count owned unique cards for that team', () => {
-    const argCards = checklist.filter(c => c.team === 'ARG').slice(0, 3).map(c => c.number);
-    const collection = Object.fromEntries(argCards.map(n => [n, 1]));
+  t('per-team totals count only team-section cards (not Golden Ballers)', () => {
+    // Argentina in pilot has 12 team-section cards (numbers 22..33).
+    const argTeamCards = checklist.filter(c => c.team === 'ARG' && c.section === 'team');
+    ok(argTeamCards.length === 12, 'pilot ARG team section should have 12 cards');
+    const collection = Object.fromEntries(argTeamCards.slice(0, 3).map(c => [c.number, 1]));
     const s = app.computeStats(checklist, collection);
     ok(s.perTeam.ARG, 'ARG entry missing');
     eq(s.perTeam.ARG.owned, 3);
-    ok(s.perTeam.ARG.total >= 3, 'ARG total should be ≥ 3');
+    eq(s.perTeam.ARG.total, 12);
+    eq(s.perTeam.ARG.name, 'Argentina');
+  });
+
+  t('Golden Baller with team=ARG does NOT bump perTeam.ARG counters', () => {
+    // Card #1 is Messi Golden Baller with team=ARG, section=golden.
+    const s = app.computeStats(checklist, { "1": 1 });
+    ok(s.perTeam.ARG, 'ARG bucket should still be created (from team-section cards)');
+    eq(s.perTeam.ARG.owned, 0, 'owning only the golden card must not credit team ARG');
+    eq(s.perSection.golden.owned, 1);
   });
 
   t('per-section totals correct for golden', () => {

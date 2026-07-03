@@ -101,7 +101,7 @@
       const perSection = {};
 
       for (const c of checklist) {
-        if (c.team) {
+        if (c.team && c.section === 'team') {
           perTeam[c.team] = perTeam[c.team] || { owned: 0, total: 0, name: c.teamName };
           perTeam[c.team].total++;
         }
@@ -115,7 +115,7 @@
         const card = byNumber.get(n);
         if (!card) continue;
         owned++;
-        if (card.team) perTeam[card.team].owned++;
+        if (card.team && card.section === 'team') perTeam[card.team].owned++;
         perSection[card.section].owned++;
       }
 
