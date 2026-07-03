@@ -209,14 +209,14 @@
     }
     #summary h3:first-child { margin-top: 0; }
     .summary-row {
-      display: grid; grid-template-columns: 40px 1fr 60px;
+      display: grid; grid-template-columns: 70px 1fr 60px;
       gap: .5rem; align-items: center;
       padding: .25rem .3rem;
       cursor: pointer;
       font-size: .8rem;
       border-radius: 4px;
     }
-    .summary-row.section { grid-template-columns: 110px 1fr 60px; }
+    .summary-row.section { grid-template-columns: 140px 1fr 60px; }
     .summary-row .lbl {
       font-weight: 600;
       overflow: hidden;
@@ -445,6 +445,30 @@
       'topKeepers', 'defensiveRocks', 'midfieldMaestros',
       'masterRookies', 'extras',
     ],
+
+    // FIFA 3-letter code → ISO 3166-1 alpha-2 (for building regional-indicator flag emoji).
+    // Two exceptions bypass the map: ENG and SCO — those need tag-sequence emoji
+    // (🏴󠁧󠁢󠁥󠁮󠁧󠁿, 🏴󠁧󠁢󠁳󠁣󠁴󠁿) and are stored as literal strings in teamFlag().
+    FIFA_TO_ISO2: {
+      ALG: 'DZ', ARG: 'AR', AUS: 'AU', AUT: 'AT', BEL: 'BE', BRA: 'BR',
+      CAN: 'CA', CIV: 'CI', COL: 'CO', CPV: 'CV', CRO: 'HR', CUW: 'CW',
+      ECU: 'EC', EGY: 'EG', ESP: 'ES', FRA: 'FR', GER: 'DE', GHA: 'GH',
+      HAI: 'HT', IRN: 'IR', JOR: 'JO', JPN: 'JP', KOR: 'KR', KSA: 'SA',
+      MAR: 'MA', MEX: 'MX', NED: 'NL', NOR: 'NO', NZL: 'NZ', PAN: 'PA',
+      PAR: 'PY', POR: 'PT', QAT: 'QA', RSA: 'ZA', SEN: 'SN', SUI: 'CH',
+      TUN: 'TN', URU: 'UY', USA: 'US', UZB: 'UZ',
+    },
+
+    teamFlag(fifaCode) {
+      // England and Scotland aren't ISO2 countries — use their tag-sequence flags.
+      if (fifaCode === 'ENG') return '🏴󠁧󠁢󠁥󠁮󠁧󠁿';
+      if (fifaCode === 'SCO') return '🏴󠁧󠁢󠁳󠁣󠁴󠁿';
+      const iso = this.FIFA_TO_ISO2[fifaCode];
+      if (!iso) return '';
+      // Regional Indicator Symbol Letters A-Z start at U+1F1E6.
+      const OFFSET = 0x1F1E6 - 'A'.charCodeAt(0);
+      return String.fromCodePoint(iso.charCodeAt(0) + OFFSET, iso.charCodeAt(1) + OFFSET);
+    },
 
     _groupByLabel(checklist, filter) {
       const groups = new Map();
@@ -781,7 +805,9 @@
         h.textContent = 'Teams';
         summary.appendChild(h);
         for (const [code, info] of teams) {
-          summary.appendChild(row('team', code, code, info.owned, info.total));
+          const flag = app.teamFlag(code);
+          const label = flag ? flag + ' ' + code : code;
+          summary.appendChild(row('team', code, label, info.owned, info.total));
         }
       }
 
