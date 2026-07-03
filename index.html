@@ -70,6 +70,18 @@
       position: relative;
     }
     .tile.owned { opacity: 1; background: var(--owned-bg); border-color: var(--owned-fg); }
+    .tile.reserved {
+      background: #fff1de;
+      border-color: #e6811a;
+    }
+    .tile.reserved.owned { background: #fff1de; border-color: #e6811a; }
+    [data-theme="dark"] .tile.reserved,
+    [data-theme="dark"] .tile.reserved.owned { background: #3a2a10; border-color: #e6811a; }
+    @media (prefers-color-scheme: dark) {
+      [data-theme="auto"] .tile.reserved,
+      [data-theme="auto"] .tile.reserved.owned { background: #3a2a10; border-color: #e6811a; }
+    }
+    .tile .rsv { color: #e6811a; font-size: .7rem; margin-left: .2rem; font-weight: 600; }
     .tile .num { font-weight: 700; }
     .tile .name { display: block; margin-top: .25rem; padding-right: 1rem; }
     .tile .meta { color: var(--muted); font-size: .7rem; margin-top: auto; }
@@ -417,14 +429,16 @@
       return lines.join('\n');
     },
 
-    formatDoublesList(checklist, collection) {
-      const dbl = c => (collection[c.number] || 0) >= 2;
+    formatDoublesList(checklist, collection, reserved) {
+      reserved = reserved || {};
+      const spareOf = n => (collection[n] || 0) - 1 - (reserved[n] || 0);
+      const dbl = c => spareOf(c.number) >= 1;
       const { groups, groupOrder } = this._groupByLabel(checklist, dbl);
       const totalDoubles = checklist.filter(dbl).length;
       const lines = [`Doubles — spare copies to trade (${totalDoubles}):`];
       for (const label of groupOrder) {
         const parts = groups.get(label).map(n => {
-          const spare = collection[n] - 1;   // keep one for the album
+          const spare = spareOf(n);
           return spare > 1 ? `${n} (×${spare})` : `${n}`;
         });
         lines.push(`${label}: ${parts.join(', ')}`);
@@ -433,14 +447,24 @@
     },
 
     applyImport(existing, imported, mode) {
+      // Legacy shape: bare { "1": 2, "5": 1 } or [1,5,5] → collection only, reserved stays.
+      // New shape:    { collection: {...}, reserved: {...} } → both.
+      let importedCollection = imported;
+      let importedReserved = null;
+      if (imported && typeof imported === 'object' && !Array.isArray(imported) &&
+          (imported.collection !== undefined || imported.reserved !== undefined)) {
+        importedCollection = imported.collection || {};
+        importedReserved = imported.reserved || {};
+      }
+
       const normalized = {};
-      if (Array.isArray(imported)) {
-        for (const n of imported) {
+      if (Array.isArray(importedCollection)) {
+        for (const n of importedCollection) {
           if (typeof n !== 'number' || n < 1 || n > 630) continue;
           normalized[n] = (normalized[n] || 0) + 1;
         }
-      } else if (imported && typeof imported === 'object') {
-        for (const [k, v] of Object.entries(imported)) {
+      } else if (importedCollection && typeof importedCollection === 'object') {
+        for (const [k, v] of Object.entries(importedCollection)) {
           const n = parseInt(k, 10);
           const c = typeof v === 'number' ? v : parseInt(v, 10);
           if (!Number.isFinite(n) || n < 1 || n > 630) continue;
@@ -449,11 +473,30 @@
         }
       }
 
-      if (mode === 'replace') return normalized;
+      // Only the collection field participates in merge/replace math.
+      // Reserved is always REPLACED wholesale (it's a small transient set;
+      // merging semantics for reservations would be confusing).
+      let out;
+      if (mode === 'replace') {
+        out = { collection: normalized };
+      } else {
+        const merged = { ...existing };
+        for (const [k, v] of Object.entries(normalized)) {
+          merged[k] = (merged[k] || 0) + v;
+        }
+        out = { collection: merged };
+      }
 
-      const out = { ...existing };
-      for (const [k, v] of Object.entries(normalized)) {
-        out[k] = (out[k] || 0) + v;
+      if (importedReserved !== null) {
+        const cleanReserved = {};
+        for (const [k, v] of Object.entries(importedReserved)) {
+          const n = parseInt(k, 10);
+          const c = typeof v === 'number' ? v : parseInt(v, 10);
+          if (!Number.isFinite(n) || n < 1 || n > 630) continue;
+          if (!Number.isFinite(c) || c < 1) continue;
+          cleanReserved[n] = c;
+        }
+        out.reserved = cleanReserved;
       }
       return out;
     },
@@ -476,6 +519,7 @@
     },
 
     STORAGE_KEY: 'panini_wc2026_collection',
+    RESERVED_KEY: 'panini_wc2026_reserved',
 
     storageAvailable() {
       try {
@@ -506,6 +550,27 @@
     saveCollection(collection) {
       try { localStorage.setItem(this.STORAGE_KEY, JSON.stringify(collection)); }
       catch (_) { /* storage disabled — silently swallow, Task 13 adds a visible banner */ }
+    },
+
+    loadReserved() {
+      try {
+        const raw = localStorage.getItem(this.RESERVED_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return {};
+        const clean = {};
+        for (const [k, v] of Object.entries(parsed)) {
+          const n = parseInt(k, 10);
+          const c = parseInt(v, 10);
+          if (n >= 1 && n <= 630 && c >= 1) clean[n] = c;
+        }
+        return clean;
+      } catch (_) { return {}; }
+    },
+
+    saveReserved(reserved) {
+      try { localStorage.setItem(this.RESERVED_KEY, JSON.stringify(reserved)); }
+      catch (_) { /* storage disabled */ }
     },
   };
 </script>
@@ -551,6 +616,7 @@
     }
 
     let collection = app.loadCollection();
+    let reserved = app.loadReserved();
 
     let filter = { kind: 'all', value: null };  // kind: 'all' | 'team' | 'section'
     let chip = 'all';         // 'all' | 'owned' | 'missing' | 'doubles'
@@ -562,9 +628,11 @@
       if (filter.kind === 'section' && c.section !== filter.value) return false;
       // Chip
       const count = collection[c.number] || 0;
+      const rsv = reserved[c.number] || 0;
+      const spare = count - 1 - rsv;   // effective tradeable copies
       if (chip === 'owned' && count < 1) return false;
       if (chip === 'missing' && count >= 1) return false;
-      if (chip === 'doubles' && count < 2) return false;
+      if (chip === 'doubles' && spare < 1) return false;
       // Search
       if (!app.matchesSearch(c, searchQuery)) return false;
       return true;
@@ -573,9 +641,10 @@
     function renderTile(c) {
       const count = collection[c.number] || 0;
       const owned = count >= 1;
+      const isReserved = owned && (reserved[c.number] || 0) > 0;
 
       const tile = document.createElement('div');
-      tile.className = 'tile' + (owned ? ' owned' : '');
+      tile.className = 'tile' + (owned ? ' owned' : '') + (isReserved ? ' reserved' : '');
       tile.dataset.number = c.number;
 
       if (c.position) {
@@ -594,6 +663,13 @@
         dup.className = 'dup';
         dup.textContent = '×' + count;
         num.append(' ', dup);
+      }
+      if (isReserved) {
+        const rsv = document.createElement('span');
+        rsv.className = 'rsv';
+        rsv.title = 'Reserved for trade';
+        rsv.textContent = '⇄';
+        num.append(' ', rsv);
       }
 
       const name = document.createElement('span');
@@ -691,23 +767,64 @@
 
     function toggle(n) {
       const cur = collection[n] || 0;
-      if (cur === 0) collection[n] = 1; else delete collection[n];
+      if (cur === 0) collection[n] = 1;
+      else { delete collection[n]; delete reserved[n]; }
       app.saveCollection(collection);
+      app.saveReserved(reserved);
       renderAll();
     }
 
-    function setExactCount(n) {
+    const cardEditModal = document.getElementById('cardEditModal');
+    const cardEditTitle = document.getElementById('cardEditTitle');
+    const cardEditCount = document.getElementById('cardEditCount');
+    const cardEditReserved = document.getElementById('cardEditReserved');
+    const cardEditReservedRow = document.getElementById('cardEditReservedRow');
+    let cardEditNumber = null;
+
+    function openCardEdit(n) {
+      cardEditNumber = n;
       const cur = collection[n] || 0;
-      const input = window.prompt('How many copies of card #' + n + ' do you own?', String(cur));
-      if (input === null) return;   // user cancelled
-      const trimmed = input.trim();
-      if (trimmed === '') { if (cur !== 0) { delete collection[n]; app.saveCollection(collection); renderAll(); } return; }
-      const c = parseInt(trimmed, 10);
-      if (!Number.isFinite(c) || c < 0 || String(c) !== trimmed) return;   // invalid input, ignore
-      if (c === 0) delete collection[n]; else collection[n] = c;
-      app.saveCollection(collection);
-      renderAll();
+      const rsv = (reserved[n] || 0) > 0;
+      cardEditTitle.textContent = 'Card #' + n;
+      cardEditCount.value = String(cur);
+      cardEditReserved.checked = rsv;
+      cardEditReservedRow.style.display = cur >= 1 ? '' : 'none';
+      if (typeof cardEditModal.showModal === 'function') cardEditModal.showModal();
+      else cardEditModal.setAttribute('open', '');
+      cardEditCount.focus();
+      cardEditCount.select();
     }
+
+    function closeCardEdit() {
+      if (typeof cardEditModal.close === 'function') cardEditModal.close();
+      else cardEditModal.removeAttribute('open');
+    }
+
+    cardEditCount.addEventListener('input', () => {
+      const v = parseInt(cardEditCount.value, 10);
+      cardEditReservedRow.style.display = (Number.isFinite(v) && v >= 1) ? '' : 'none';
+    });
+
+    document.getElementById('cardEditSave').addEventListener('click', () => {
+      if (cardEditNumber === null) return;
+      const n = cardEditNumber;
+      const raw = cardEditCount.value.trim();
+      const c = parseInt(raw, 10);
+      if (!Number.isFinite(c) || c < 0 || String(c) !== raw) { closeCardEdit(); return; }
+      if (c === 0) { delete collection[n]; delete reserved[n]; }
+      else {
+        collection[n] = c;
+        if (cardEditReserved.checked) reserved[n] = 1;
+        else delete reserved[n];
+      }
+      app.saveCollection(collection);
+      app.saveReserved(reserved);
+      closeCardEdit();
+      renderAll();
+    });
+    document.getElementById('cardEditCancel').addEventListener('click', closeCardEdit);
+
+    function setExactCount(n) { openCardEdit(n); }
 
     let longPressed = false;
     let pressTimer = null;
@@ -845,7 +962,10 @@
       const kind = b.dataset.export;
 
       if (kind === 'json') {
-        const blob = new Blob([JSON.stringify(collection, null, 2)], { type: 'application/json' });
+        const payload = Object.keys(reserved).length > 0
+          ? { collection, reserved }
+          : collection;   // stay compatible with old shape when there's nothing to reserve
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -859,7 +979,7 @@
       } else if (kind === 'missing') {
         openTextModal('Missing cards', app.formatMissingList(checklist, collection));
       } else if (kind === 'doubles') {
-        openTextModal('Doubles', app.formatDoublesList(checklist, collection));
+        openTextModal('Doubles', app.formatDoublesList(checklist, collection, reserved));
       }
 
       document.getElementById('exportMenu').open = false;
@@ -902,8 +1022,11 @@
         'OK = Merge (add counts on top of existing)\n' +
         'Cancel = Replace (wipe first, then apply)'
       );
-      collection = app.applyImport(collection, parsed, merge ? 'merge' : 'replace');
+      const result = app.applyImport(collection, parsed, merge ? 'merge' : 'replace');
+      collection = result.collection;
+      if (result.reserved !== undefined) reserved = result.reserved;
       app.saveCollection(collection);
+      app.saveReserved(reserved);
       renderAll();
       showToast('Import applied');
       e.target.value = '';
@@ -937,6 +1060,23 @@
   })();
   </script>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="cardEditModal">
+    <h3 id="cardEditTitle"></h3>
+    <div style="display:flex;flex-direction:column;gap:.6rem;">
+      <label style="display:flex;flex-direction:column;gap:.2rem;">
+        <span>Copies owned</span>
+        <input id="cardEditCount" type="number" min="0" step="1" style="padding:.3rem .5rem;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:4px;width:6rem;">
+      </label>
+      <label id="cardEditReservedRow" style="display:flex;align-items:center;gap:.4rem;">
+        <input id="cardEditReserved" type="checkbox">
+        <span>Reserved for trade (one copy set aside)</span>
+      </label>
+    </div>
+    <menu>
+      <button id="cardEditSave" type="button">Save</button>
+      <button id="cardEditCancel" type="button">Cancel</button>
+    </menu>
+  </dialog>
   <dialog id="textModal">
     <h3 id="textModalTitle"></h3>
     <textarea id="textModalBody" rows="18" cols="60" readonly></textarea>

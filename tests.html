@@ -310,46 +310,72 @@ async function main() {
     eq(out, 'Doubles — spare copies to trade (0):');
   });
 
+  t('doubles list subtracts reserved copies from spares', () => {
+    // #22: own 3, reserve 1 → 1 spare left (so "22" bare, not "22 (×2)")
+    // #23: own 3, reserve 0 → 2 spare (so "23 (×2)")
+    // #24: own 2, reserve 1 → 0 spare, drops off the list entirely
+    const out = app.formatDoublesList(checklist, { "22": 3, "23": 3, "24": 2 }, { "22": 1, "24": 1 });
+    ok(out.startsWith('Doubles — spare copies to trade (2):'), 'header wrong: ' + out.split('\n')[0]);
+    ok(/(^|:\s|,\s)22(,|\s|$)/m.test(out), 'card #22 (1 spare) should appear bare');
+    ok(out.includes('23 (×2)'), 'card #23 should show (×2)');
+    ok(!/(^|:\s|,\s)24(,|\s|$)/m.test(out), 'card #24 should NOT appear (all spares reserved)');
+  });
+
+  t('reserved without duplicates has no effect on doubles list', () => {
+    const out = app.formatDoublesList(checklist, { "22": 1 }, { "22": 1 });
+    eq(out, 'Doubles — spare copies to trade (0):');
+  });
+
   results.insertAdjacentHTML('beforeend', '<h2>applyImport</h2>');
 
   t('array form → each becomes count 1 (replace mode)', () => {
     const r = app.applyImport({}, [1, 15, 22], 'replace');
-    eq(r, { "1": 1, "15": 1, "22": 1 });
+    eq(r, { collection: { "1": 1, "15": 1, "22": 1 } });
   });
 
   t('object form → passthrough (replace mode)', () => {
     const r = app.applyImport({ "99": 5 }, { "1": 2, "15": 1 }, 'replace');
-    eq(r, { "1": 2, "15": 1 });
+    eq(r, { collection: { "1": 2, "15": 1 } });
   });
 
   t('merge mode adds counts on top of existing', () => {
     const r = app.applyImport({ "1": 1, "2": 1 }, { "1": 2, "3": 1 }, 'merge');
-    eq(r, { "1": 3, "2": 1, "3": 1 });
+    eq(r, { collection: { "1": 3, "2": 1, "3": 1 } });
   });
 
   t('merge mode with array form adds 1 to each', () => {
     const r = app.applyImport({ "1": 2 }, [1, 2], 'merge');
-    eq(r, { "1": 3, "2": 1 });
+    eq(r, { collection: { "1": 3, "2": 1 } });
   });
 
   t('ignores out-of-range numbers silently', () => {
     const r = app.applyImport({}, { "9999": 3, "0": 2, "5": 1 }, 'replace');
-    eq(r, { "5": 1 });
+    eq(r, { collection: { "5": 1 } });
   });
 
   t('ignores zero/negative counts in imported object', () => {
     const r = app.applyImport({}, { "1": 0, "2": -1, "3": 1 }, 'replace');
-    eq(r, { "3": 1 });
+    eq(r, { collection: { "3": 1 } });
   });
 
   t('array items outside 1..630 are skipped', () => {
     const r = app.applyImport({}, [1, 0, 631, 700, 5], 'replace');
-    eq(r, { "1": 1, "5": 1 });
+    eq(r, { collection: { "1": 1, "5": 1 } });
   });
 
   t('array with duplicates increments the same key', () => {
     const r = app.applyImport({}, [5, 5, 5], 'replace');
-    eq(r, { "5": 3 });
+    eq(r, { collection: { "5": 3 } });
+  });
+
+  t('new shape {collection, reserved} round-trips both fields', () => {
+    const r = app.applyImport({}, { collection: { "5": 2 }, reserved: { "5": 1 } }, 'replace');
+    eq(r, { collection: { "5": 2 }, reserved: { "5": 1 } });
+  });
+
+  t('legacy shape (bare object) does not overwrite reserved', () => {
+    const r = app.applyImport({ "1": 1 }, { "5": 1 }, 'replace');
+    ok(r.reserved === undefined, 'legacy import should not carry a reserved field');
   });
 
   results.insertAdjacentHTML('beforeend', '<h2>matchesSearch</h2>');
