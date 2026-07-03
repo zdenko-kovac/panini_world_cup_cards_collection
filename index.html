@@ -58,7 +58,7 @@
 <body>
   <header>
     <h1>Panini FIFA World Cup 2026 — Adrenalyn XL</h1>
-    <div class="overall"><span id="ownedCount">0</span> / 630 <span class="pct" id="ownedPct">0%</span></div>
+    <div class="overall"><span id="ownedCount">0</span> / <span id="ownedTotal">0</span> <span class="pct" id="ownedPct">0%</span></div>
     <div class="bar"><div id="overallBar" style="width:0%"></div></div>
   </header>
   <main>
@@ -252,6 +252,7 @@
     const app = window.__paniniApp;
     const grid = document.getElementById('grid');
     const ownedCountEl = document.getElementById('ownedCount');
+    const ownedTotalEl = document.getElementById('ownedTotal');
     const ownedPctEl = document.getElementById('ownedPct');
     const overallBarEl = document.getElementById('overallBar');
 
@@ -302,6 +303,7 @@
       for (const c of checklist) grid.appendChild(renderTile(c));
       const stats = app.computeStats(checklist, collection);
       ownedCountEl.textContent = stats.owned;
+      ownedTotalEl.textContent = stats.total;
       ownedPctEl.textContent = stats.pct + '%';
       overallBarEl.style.width = stats.pct + '%';
     }
