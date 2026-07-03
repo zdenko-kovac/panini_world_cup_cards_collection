@@ -348,6 +348,49 @@ async function main() {
     eq(r, { "5": 3 });
   });
 
+  results.insertAdjacentHTML('beforeend', '<h2>matchesSearch</h2>');
+
+  t('matches card number exactly', () => {
+    const c = { number: 25, team: 'ARG', teamName: 'Argentina', player: 'Lionel Messi' };
+    ok(app.matchesSearch(c, '25'));
+    ok(!app.matchesSearch(c, '250'));
+  });
+
+  t('matches team code case-insensitively', () => {
+    const c = { number: 25, team: 'ARG', teamName: 'Argentina', player: 'Lionel Messi' };
+    ok(app.matchesSearch(c, 'arg'));
+    ok(app.matchesSearch(c, 'ARG'));
+  });
+
+  t('matches team name substring', () => {
+    const c = { number: 25, team: 'ARG', teamName: 'Argentina', player: 'Lionel Messi' };
+    ok(app.matchesSearch(c, 'argen'));
+  });
+
+  t('matches player name substring case-insensitively', () => {
+    const c = { number: 25, team: 'ARG', teamName: 'Argentina', player: 'Lionel Messi' };
+    ok(app.matchesSearch(c, 'messi'));
+    ok(app.matchesSearch(c, 'lionel'));
+  });
+
+  t('empty query matches everything', () => {
+    const c = { number: 25, team: 'ARG', teamName: 'Argentina', player: 'Lionel Messi' };
+    ok(app.matchesSearch(c, ''));
+    ok(app.matchesSearch(c, '  '));
+  });
+
+  t('rejects non-matches', () => {
+    const c = { number: 25, team: 'ARG', teamName: 'Argentina', player: 'Lionel Messi' };
+    ok(!app.matchesSearch(c, 'ronaldo'));
+  });
+
+  t('handles null team/teamName without crashing', () => {
+    const c = { number: 625, team: null, teamName: null, player: 'Official Mascot — Maple' };
+    ok(app.matchesSearch(c, 'maple'));
+    ok(app.matchesSearch(c, '625'));
+    ok(!app.matchesSearch(c, 'argentina'));
+  });
+
   results.insertAdjacentHTML('beforeend',
     `<h2>${failed === 0 ? '✅' : '❌'} ${passed} passed, ${failed} failed</h2>`);
 }

@@ -111,6 +111,20 @@
       cursor: pointer; font: inherit;
     }
     #clearFilter:hover { background: rgba(127,127,127,.1); }
+    #searchInput {
+      padding: .3rem .5rem; font: inherit; color: var(--fg);
+      background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+      min-width: 200px;
+    }
+    #chips { display: flex; gap: .25rem; flex-wrap: wrap; }
+    .chip {
+      padding: .3rem .7rem;
+      background: var(--bg); color: var(--fg);
+      border: 1px solid var(--border); border-radius: 999px;
+      cursor: pointer; font: inherit; font-size: .8rem;
+    }
+    .chip:hover { background: rgba(127,127,127,.1); }
+    .chip.active { background: var(--owned-fg); color: white; border-color: var(--owned-fg); }
   </style>
 </head>
 <body>
@@ -125,6 +139,13 @@
       <button type="submit">Add</button>
       <span id="quickAddError" class="err" role="status" aria-live="polite"></span>
     </form>
+    <input id="searchInput" type="search" placeholder="Search #, team, or player…" autocomplete="off" spellcheck="false">
+    <div id="chips" role="group" aria-label="Filter cards">
+      <button type="button" class="chip active" data-chip="all">All</button>
+      <button type="button" class="chip" data-chip="owned">Owned</button>
+      <button type="button" class="chip" data-chip="missing">Missing</button>
+      <button type="button" class="chip" data-chip="doubles">Doubles</button>
+    </div>
   </div>
   <main>
     <aside id="summary"></aside>
@@ -276,6 +297,16 @@
       return out;
     },
 
+    matchesSearch(card, query) {
+      if (!query || !query.trim()) return true;
+      const q = query.trim().toLowerCase();
+      if (String(card.number) === q) return true;
+      if (card.team && card.team.toLowerCase() === q) return true;
+      if (card.teamName && card.teamName.toLowerCase().includes(q)) return true;
+      if (card.player && card.player.toLowerCase().includes(q)) return true;
+      return false;
+    },
+
     STORAGE_KEY: 'panini_wc2026_collection',
 
     storageAvailable() {
@@ -334,10 +365,20 @@
     let collection = app.loadCollection();
 
     let filter = { kind: 'all', value: null };  // kind: 'all' | 'team' | 'section'
+    let chip = 'all';         // 'all' | 'owned' | 'missing' | 'doubles'
+    let searchQuery = '';
 
     function cardVisible(c) {
-      if (filter.kind === 'team') return c.team === filter.value;
-      if (filter.kind === 'section') return c.section === filter.value;
+      // Section/team filter
+      if (filter.kind === 'team' && c.team !== filter.value) return false;
+      if (filter.kind === 'section' && c.section !== filter.value) return false;
+      // Chip
+      const count = collection[c.number] || 0;
+      if (chip === 'owned' && count < 1) return false;
+      if (chip === 'missing' && count >= 1) return false;
+      if (chip === 'doubles' && count < 2) return false;
+      // Search
+      if (!app.matchesSearch(c, searchQuery)) return false;
       return true;
     }
 
@@ -474,6 +515,21 @@
       filter = { kind: row.dataset.kind, value: row.dataset.value };
       renderAll();
       document.getElementById('grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      renderAll();
+    });
+
+    document.getElementById('chips').addEventListener('click', (e) => {
+      const btn = e.target.closest('.chip');
+      if (!btn) return;
+      chip = btn.dataset.chip;
+      for (const b of document.querySelectorAll('#chips .chip')) {
+        b.classList.toggle('active', b === btn);
+      }
+      renderAll();
     });
 
     const form = document.getElementById('quickAddForm');
