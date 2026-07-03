@@ -131,6 +131,10 @@
     }
     .summary-row:hover { background: rgba(127,127,127,.1); }
     .summary-row.active { background: var(--owned-bg); }
+    .summary-row.complete { background: var(--owned-bg); }
+    .summary-row.complete .lbl { color: var(--owned-fg); }
+    .summary-row.complete .num { color: var(--owned-fg); font-weight: 600; }
+    .summary-row.complete.active { outline: 2px solid var(--owned-fg); outline-offset: -2px; }
     .summary-row .num { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
     .summary-row .bar { height: 4px; margin: 0; }
     #clearFilter {
@@ -552,6 +556,7 @@
         const el = document.createElement('div');
         el.className = 'summary-row' + (kind === 'section' ? ' section' : '');
         if (filter.kind === kind && filter.value === value) el.classList.add('active');
+        if (total > 0 && owned === total) el.classList.add('complete');
         el.dataset.kind = kind;
         el.dataset.value = value;
 
