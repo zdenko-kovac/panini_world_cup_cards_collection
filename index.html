@@ -53,6 +53,26 @@
     .tile .name { display: block; margin-top: .25rem; }
     .tile .meta { color: var(--muted); font-size: .7rem; }
     .tile .dup { color: var(--muted); font-size: .7rem; margin-left: .2rem; font-weight: normal; }
+    .banner {
+      background: #fff3cd; color: #664d03;
+      padding: .5rem 1rem;
+      border-bottom: 1px solid #d5a900;
+      font-size: .85rem;
+    }
+    .banner.error {
+      background: #f8d7da; color: #58151c;
+      border-bottom-color: #b02a37;
+    }
+    .banner button {
+      margin-left: .5rem; padding: .2rem .5rem;
+      background: transparent; color: inherit;
+      border: 1px solid currentColor; border-radius: 4px;
+      cursor: pointer; font: inherit; font-size: .8rem;
+    }
+    @media (prefers-color-scheme: dark) {
+      .banner { background: #3a2e00; color: #fbe9a0; border-bottom-color: #6b5100; }
+      .banner.error { background: #4a1a1e; color: #f5b7bd; border-bottom-color: #a3444d; }
+    }
     #toolbar {
       position: sticky; top: 0; z-index: 5;
       background: var(--bg); border-bottom: 1px solid var(--border);
@@ -182,6 +202,7 @@
   </style>
 </head>
 <body>
+  <div id="banner" class="banner" role="status" aria-live="polite" hidden></div>
   <header>
     <h1>Panini FIFA World Cup 2026 — Adrenalyn XL</h1>
     <div class="overall"><span id="ownedCount">0</span> / <span id="ownedTotal">0</span> <span class="pct" id="ownedPct">0%</span></div>
@@ -417,14 +438,34 @@
     const ownedTotalEl = document.getElementById('ownedTotal');
     const ownedPctEl = document.getElementById('ownedPct');
     const overallBarEl = document.getElementById('overallBar');
+    const banner = document.getElementById('banner');
+
+    // Storage-disabled banner (yellow, warning). Not dismissable — the state is persistent.
+    if (!app.storageAvailable()) {
+      banner.hidden = false;
+      banner.textContent = '⚠ Storage disabled — your collection will not persist. Use Export to save manually.';
+    }
 
     let checklist;
     try {
       const res = await fetch('checklist.json');
       if (!res.ok) throw new Error('HTTP ' + res.status);
       checklist = await res.json();
+      if (!Array.isArray(checklist) || checklist.length === 0) {
+        throw new Error('checklist.json is empty or not an array');
+      }
     } catch (err) {
       console.error('Failed to load checklist.json:', err);
+      banner.hidden = false;
+      banner.classList.add('error');
+      banner.textContent = '';   // clear any earlier storage warning; the fatal error takes precedence
+      const msg = document.createElement('span');
+      msg.textContent = 'Failed to load checklist.json — ' + err.message + '. ';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = 'Reload';
+      btn.addEventListener('click', () => location.reload());
+      banner.append(msg, btn);
       return;
     }
 
