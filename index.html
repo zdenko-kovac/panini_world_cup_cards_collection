@@ -21,6 +21,10 @@
       --border: #e0e0e0;
       --owned-bg: #e6f4ea;
       --owned-fg: #0a7a2f;
+      --pitch: #0a7a2f;
+      --pitch-soft: #d5ebda;
+      --header-grad-1: #0a7a2f;
+      --header-grad-2: #0e9e40;
       --pos-gk: #7a3fb2;
       --pos-def: #d33a3a;
       --pos-mid: #e6811a;
@@ -34,6 +38,10 @@
         --border: #333;
         --owned-bg: #14361f;
         --owned-fg: #7fd394;
+        --pitch: #7fd394;
+        --pitch-soft: #1a2f22;
+        --header-grad-1: #0a2f18;
+        --header-grad-2: #14361f;
       }
     }
     [data-theme="dark"] {
@@ -43,11 +51,47 @@
       --border: #333;
       --owned-bg: #14361f;
       --owned-fg: #7fd394;
+      --pitch: #7fd394;
+      --pitch-soft: #1a2f22;
+      --header-grad-1: #0a2f18;
+      --header-grad-2: #14361f;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--fg); }
-    header { padding: 1rem; border-bottom: 1px solid var(--border); }
-    header h1 { margin: 0 0 .25rem; font-size: 1.1rem; }
+    body {
+      margin: 0; font-family: system-ui, sans-serif;
+      background: var(--bg); color: var(--fg);
+      background-image:
+        radial-gradient(circle at 1px 1px, var(--pitch-soft) 1px, transparent 0);
+      background-size: 24px 24px;
+      background-attachment: fixed;
+    }
+    header {
+      padding: 1rem;
+      border-bottom: 2px solid var(--pitch);
+      background: linear-gradient(135deg, var(--header-grad-1), var(--header-grad-2));
+      color: #fff;
+    }
+    header h1 {
+      margin: 0 0 .25rem;
+      font-size: 1.15rem;
+      letter-spacing: .02em;
+      font-weight: 700;
+    }
+    header h1::before { content: '⚽ '; }
+    header .overall { color: #fff; }
+    header .overall .pct { color: rgba(255,255,255,.75); }
+    header .bar { background: rgba(255,255,255,.2); }
+    header .bar > div { background: #fff; }
+    header .legend { color: rgba(255,255,255,.85); }
+    header h1 { margin: 0; }
+    header .subtitle {
+      font-size: .7rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      opacity: .85;
+      margin-top: .1rem;
+      margin-bottom: .35rem;
+    }
     .overall { font-size: 2rem; font-weight: 700; }
     .overall .pct { font-size: 1rem; color: var(--muted); margin-left: .5rem; }
     .bar { height: 6px; background: var(--border); border-radius: 3px; margin-top: .5rem; overflow: hidden; }
@@ -278,7 +322,8 @@
 <body>
   <div id="banner" class="banner" role="status" aria-live="polite" hidden></div>
   <header>
-    <h1>Panini FIFA World Cup 2026 — Adrenalyn XL</h1>
+    <h1>FIFA World Cup 2026 — Adrenalyn XL</h1>
+    <div class="subtitle">Canada · Mexico · USA</div>
     <div class="overall"><span id="ownedCount">0</span> / <span id="ownedTotal">0</span> <span class="pct" id="ownedPct">0%</span></div>
     <div class="bar"><div id="overallBar" style="width:0%"></div></div>
     <div class="legend" aria-label="Position colour legend">
