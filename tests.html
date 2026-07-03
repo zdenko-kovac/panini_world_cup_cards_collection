@@ -249,6 +249,63 @@ async function main() {
     eq(s.owned, 0);
   });
 
+  results.insertAdjacentHTML('beforeend', '<h2>formatMissingList / formatDoublesList</h2>');
+
+  t('missing list header shows count', () => {
+    // Pretend nothing is owned — missing count === checklist.length
+    const out = app.formatMissingList(checklist, {});
+    ok(out.startsWith(`Missing (${checklist.length}):`), 'header wrong: ' + out.split('\n')[0]);
+  });
+
+  t('missing list groups by section/team, comma-separates numbers', () => {
+    // Own every card except 1, 3 in golden section
+    const collection = {};
+    for (const c of checklist) if (c.number !== 1 && c.number !== 3) collection[c.number] = 1;
+    const out = app.formatMissingList(checklist, collection);
+    ok(out.includes('Golden Ballers: 1, 3'), 'golden section missing not formatted:\n' + out);
+  });
+
+  t('doubles list only lists cards with count >= 2', () => {
+    const collection = { "1": 1, "2": 2, "22": 3 };
+    const out = app.formatDoublesList(checklist, collection);
+    ok(!/(^|:\s)1\b/m.test(out), 'card #1 should not appear (count 1)');
+    ok(out.includes('2 (×2)'), 'card #2 (×2) missing:\n' + out);
+    ok(out.includes('22 (×3)'), 'card #22 (×3) missing:\n' + out);
+  });
+
+  t('doubles list header shows count of distinct doubled cards', () => {
+    const collection = { "1": 2, "2": 3, "22": 1 };
+    const out = app.formatDoublesList(checklist, collection);
+    ok(out.startsWith('Doubles (2):'), 'header wrong: ' + out.split('\n')[0]);
+  });
+
+  t('missing list uses team name for team cards, section label for others', () => {
+    // Own everything except (a) all golden, (b) all Argentina team cards.
+    const collection = {};
+    for (const c of checklist) {
+      const isGolden = c.section === 'golden';
+      const isArgTeam = c.team === 'ARG' && c.section === 'team';
+      if (!isGolden && !isArgTeam) collection[c.number] = 1;
+    }
+    const out = app.formatMissingList(checklist, collection);
+    ok(out.includes('Golden Ballers:'), 'expected Golden Ballers section header');
+    ok(out.includes('Argentina:'), 'expected Argentina team header');
+  });
+
+  t('missing list is empty (only header) when everything is owned', () => {
+    const collection = {};
+    for (const c of checklist) collection[c.number] = 1;
+    const out = app.formatMissingList(checklist, collection);
+    eq(out, 'Missing (0):');
+  });
+
+  t('doubles list is empty (only header) when no doubles', () => {
+    const collection = {};
+    for (const c of checklist) collection[c.number] = 1;
+    const out = app.formatDoublesList(checklist, collection);
+    eq(out, 'Doubles (0):');
+  });
+
   results.insertAdjacentHTML('beforeend',
     `<h2>${failed === 0 ? '✅' : '❌'} ${passed} passed, ${failed} failed</h2>`);
 }

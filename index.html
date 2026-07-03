@@ -127,6 +127,62 @@
         perSection,
       };
     },
+
+    SECTION_LABELS: {
+      golden: 'Golden Ballers',
+      team: null,   // for team cards, group by team name instead
+      contenders: 'Contenders',
+      goalMachines: 'Goal Machines',
+      topKeepers: 'Top Keepers',
+      defensiveRocks: 'Defensive Rocks',
+      midfieldMaestros: 'Midfield Maestros',
+      masterRookies: 'Master Rookies',
+      extras: 'Extras',
+    },
+
+    SECTION_ORDER: [
+      'golden', 'team', 'contenders', 'goalMachines',
+      'topKeepers', 'defensiveRocks', 'midfieldMaestros',
+      'masterRookies', 'extras',
+    ],
+
+    _groupByLabel(checklist, filter) {
+      const groups = new Map();
+      const groupOrder = [];
+      for (const sec of this.SECTION_ORDER) {
+        for (const c of checklist) {
+          if (c.section !== sec) continue;
+          if (!filter(c)) continue;
+          const label = (sec === 'team') ? c.teamName : this.SECTION_LABELS[sec];
+          if (!groups.has(label)) { groups.set(label, []); groupOrder.push(label); }
+          groups.get(label).push(c.number);
+        }
+      }
+      return { groups, groupOrder };
+    },
+
+    formatMissingList(checklist, collection) {
+      const missing = c => !collection[c.number] || collection[c.number] < 1;
+      const { groups, groupOrder } = this._groupByLabel(checklist, missing);
+      const totalMissing = checklist.filter(missing).length;
+      const lines = [`Missing (${totalMissing}):`];
+      for (const label of groupOrder) {
+        lines.push(`${label}: ${groups.get(label).join(', ')}`);
+      }
+      return lines.join('\n');
+    },
+
+    formatDoublesList(checklist, collection) {
+      const dbl = c => (collection[c.number] || 0) >= 2;
+      const { groups, groupOrder } = this._groupByLabel(checklist, dbl);
+      const totalDoubles = checklist.filter(dbl).length;
+      const lines = [`Doubles (${totalDoubles}):`];
+      for (const label of groupOrder) {
+        const parts = groups.get(label).map(n => `${n} (×${collection[n]})`);
+        lines.push(`${label}: ${parts.join(', ')}`);
+      }
+      return lines.join('\n');
+    },
   };
 </script>
 
