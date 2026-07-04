@@ -8,14 +8,16 @@ collection (all 630 cards).
 ## Features
 
 - Quick-add card numbers (`10, 15, 22-25`) to mark what you own.
-- Click a tile to toggle owned. Right-click / long-press to set an exact count for duplicates.
+- Click a tile to toggle owned. Right-click / long-press to set an exact count for duplicates or to mark a missing card as **incoming** (trade already agreed).
 - Overall percentage, per-team progress bars, per-special-set progress bars.
-- Completed teams / sets (12/12, 9/9, etc.) highlight green in the summary panel.
-- Search by card number, 3-letter team code, team name, or player name.
-- Filter by Owned / Missing / Doubles.
-- Export a missing list or doubles list as copy-pasteable text for trading.
-- Export / import a JSON backup for cross-device transfer.
-- Dark mode via system preference.
+- Three-state completion in the summary panel: **green** = fully owned, **orange** = complete only when incoming trades arrive, plain = still hunting.
+- Country-flag emoji before every team code in the summary.
+- Search by card number, numeric range (`22-33`), 3-letter team code, team name, player name, or position (`GK` / `DEF` / `MID` / `FWD`).
+- Filter chips: All / Owned / Missing / Incoming / Doubles. Missing excludes cards you already have on the way.
+- Export a **Missing list**, **Incoming list**, or **Doubles list** as copy-pasteable text for trading.
+- Export / import a JSON backup (includes both collection and incoming marks) for cross-device transfer. Legacy backups still import cleanly.
+- Dark mode via system preference (plus manual light/dark/auto toggle).
+- World Cup 2026 themed header (pitch-green gradient, host-nation subtitle) and a subtle pitch-dot background.
 - Data stays in your browser (`localStorage`). No account, no server — you can safely
   share the link and each visitor tracks their own private collection.
 
