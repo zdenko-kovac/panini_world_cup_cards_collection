@@ -490,6 +490,24 @@ async function main() {
     ok(!app.matchesSearch(c, '5-3'));
   });
 
+  t('matches position code case-insensitively', () => {
+    const c = { number: 25, team: 'ARG', teamName: 'Argentina', player: 'Lionel Messi', position: 'FWD' };
+    ok(app.matchesSearch(c, 'fwd'));
+    ok(app.matchesSearch(c, 'FWD'));
+    ok(!app.matchesSearch(c, 'gk'));
+  });
+
+  t('position search only matches exact position, not substrings', () => {
+    const c = { number: 25, team: 'ARG', teamName: 'Argentina', player: 'Lionel Messi', position: 'FWD' };
+    ok(!app.matchesSearch(c, 'w'), 'FWD contains W but should not match a single letter');
+  });
+
+  t('position search handles cards without a position (Golden, contenders)', () => {
+    const c = { number: 1, team: 'ARG', teamName: 'Argentina', player: 'Lionel Messi', position: null };
+    ok(!app.matchesSearch(c, 'gk'));
+    ok(app.matchesSearch(c, 'messi'));
+  });
+
   results.insertAdjacentHTML('beforeend',
     `<h2>${failed === 0 ? '✅' : '❌'} ${passed} passed, ${failed} failed</h2>`);
 }
