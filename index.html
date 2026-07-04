@@ -344,6 +344,7 @@
       <button type="button" class="chip active" data-chip="all">All</button>
       <button type="button" class="chip" data-chip="owned">Owned</button>
       <button type="button" class="chip" data-chip="missing">Missing</button>
+      <button type="button" class="chip" data-chip="incoming">Incoming</button>
       <button type="button" class="chip" data-chip="doubles">Doubles</button>
     </div>
     <details id="exportMenu" class="menu">
@@ -351,6 +352,7 @@
       <ul>
         <li><button type="button" data-export="json">JSON backup</button></li>
         <li><button type="button" data-export="missing">Missing list</button></li>
+        <li><button type="button" data-export="incoming">Incoming list</button></li>
         <li><button type="button" data-export="doubles">Doubles list</button></li>
       </ul>
     </details>
@@ -487,21 +489,26 @@
 
     formatMissingList(checklist, collection, reserved) {
       reserved = reserved || {};
-      const missing = c => !collection[c.number] || collection[c.number] < 1;
+      // Missing = cards not owned AND not marked incoming.
+      // Incoming cards are treated as half-owned and reported via formatIncomingList instead.
+      const missing = c => (!collection[c.number] || collection[c.number] < 1) && !reserved[c.number];
       const { groups, groupOrder } = this._groupByLabel(checklist, missing);
-      const missingCards = checklist.filter(missing);
-      const totalMissing = missingCards.length;
-      const incoming = missingCards.filter(c => reserved[c.number]).length;
-      const stillToFind = totalMissing - incoming;
-      const header = incoming > 0
-        ? `Missing (${totalMissing} / ${stillToFind} still to find):`
-        : `Missing (${totalMissing}):`;
-      const lines = [header];
+      const totalMissing = checklist.filter(missing).length;
+      const lines = [`Missing (${totalMissing}):`];
       for (const label of groupOrder) {
-        const parts = groups.get(label).map(n =>
-          reserved[n] ? `${n}⇄` : String(n)
-        );
-        lines.push(`${label}: ${parts.join(', ')}`);
+        lines.push(`${label}: ${groups.get(label).join(', ')}`);
+      }
+      return lines.join('\n');
+    },
+
+    formatIncomingList(checklist, collection, reserved) {
+      reserved = reserved || {};
+      const incoming = c => (!collection[c.number] || collection[c.number] < 1) && !!reserved[c.number];
+      const { groups, groupOrder } = this._groupByLabel(checklist, incoming);
+      const totalIncoming = checklist.filter(incoming).length;
+      const lines = [`Incoming (${totalIncoming}):`];
+      for (const label of groupOrder) {
+        lines.push(`${label}: ${groups.get(label).join(', ')}`);
       }
       return lines.join('\n');
     },
@@ -703,8 +710,10 @@
       if (filter.kind === 'section' && c.section !== filter.value) return false;
       // Chip
       const count = collection[c.number] || 0;
+      const isIncoming = count < 1 && (reserved[c.number] || 0) > 0;
       if (chip === 'owned' && count < 1) return false;
-      if (chip === 'missing' && count >= 1) return false;
+      if (chip === 'missing' && (count >= 1 || isIncoming)) return false;
+      if (chip === 'incoming' && !isIncoming) return false;
       if (chip === 'doubles' && count < 2) return false;
       // Search
       if (!app.matchesSearch(c, searchQuery)) return false;
@@ -1057,6 +1066,8 @@
         showToast('Downloaded ' + a.download);
       } else if (kind === 'missing') {
         openTextModal('Missing cards', app.formatMissingList(checklist, collection, reserved));
+      } else if (kind === 'incoming') {
+        openTextModal('Incoming cards', app.formatIncomingList(checklist, collection, reserved));
       } else if (kind === 'doubles') {
         openTextModal('Doubles', app.formatDoublesList(checklist, collection));
       }
