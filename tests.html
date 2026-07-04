@@ -249,6 +249,29 @@ async function main() {
     eq(s.owned, 0);
   });
 
+  t('reserved cards contribute to perTeam.incoming, not owned', () => {
+    // ARG team-section = cards 22..33 (12 cards). Own 3, mark 1 more as incoming.
+    const argTeamCards = checklist.filter(c => c.team === 'ARG' && c.section === 'team');
+    const collection = Object.fromEntries(argTeamCards.slice(0, 3).map(c => [c.number, 1]));
+    const reserved = { [argTeamCards[3].number]: 1 };
+    const s = app.computeStats(checklist, collection, reserved);
+    eq(s.perTeam.ARG.owned, 3);
+    eq(s.perTeam.ARG.incoming, 1);
+    eq(s.perTeam.ARG.total, 12);
+    eq(s.owned, 3, 'overall owned count stays strict — incoming does not inflate it');
+  });
+
+  t('reserved on an already-owned card does not add to incoming', () => {
+    const s = app.computeStats(checklist, { "1": 1 }, { "1": 1 });
+    eq(s.perSection.golden.owned, 1);
+    eq(s.perSection.golden.incoming, 0);
+  });
+
+  t('reserved without corresponding entry (unknown card) is ignored', () => {
+    const s = app.computeStats(checklist, {}, { "9999": 1 });
+    eq(s.owned, 0);
+  });
+
   results.insertAdjacentHTML('beforeend', '<h2>formatMissingList / formatDoublesList</h2>');
 
   t('missing list header shows count', () => {

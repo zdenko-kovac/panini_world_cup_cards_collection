@@ -230,6 +230,15 @@
     .summary-row.complete .lbl { color: var(--owned-fg); }
     .summary-row.complete .num { color: var(--owned-fg); font-weight: 600; }
     .summary-row.complete.active { outline: 2px solid var(--owned-fg); outline-offset: -2px; }
+    .summary-row.complete-incoming { background: #fff1de; }
+    .summary-row.complete-incoming .lbl { color: #e6811a; }
+    .summary-row.complete-incoming .num { color: #e6811a; font-weight: 600; }
+    .summary-row.complete-incoming .bar > div { background: #e6811a; }
+    .summary-row.complete-incoming.active { outline: 2px solid #e6811a; outline-offset: -2px; }
+    [data-theme="dark"] .summary-row.complete-incoming { background: #3a2a10; }
+    @media (prefers-color-scheme: dark) {
+      [data-theme="auto"] .summary-row.complete-incoming { background: #3a2a10; }
+    }
     .summary-row .num { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
     .summary-row .bar { height: 4px; margin: 0; }
     #clearFilter {
@@ -396,7 +405,8 @@
       return { valid, errors };
     },
 
-    computeStats(checklist, collection) {
+    computeStats(checklist, collection, reserved) {
+      reserved = reserved || {};
       const byNumber = new Map(checklist.map(c => [c.number, c]));
       let owned = 0;
       const perTeam = {};
@@ -404,21 +414,23 @@
 
       for (const c of checklist) {
         if (c.team && c.section === 'team') {
-          perTeam[c.team] = perTeam[c.team] || { owned: 0, total: 0, name: c.teamName };
+          perTeam[c.team] = perTeam[c.team] || { owned: 0, incoming: 0, total: 0, name: c.teamName };
           perTeam[c.team].total++;
         }
-        perSection[c.section] = perSection[c.section] || { owned: 0, total: 0 };
+        perSection[c.section] = perSection[c.section] || { owned: 0, incoming: 0, total: 0 };
         perSection[c.section].total++;
       }
 
-      for (const [numStr, count] of Object.entries(collection)) {
-        if (!count || count < 1) continue;
-        const n = parseInt(numStr, 10);
-        const card = byNumber.get(n);
-        if (!card) continue;
-        owned++;
-        if (card.team && card.section === 'team') perTeam[card.team].owned++;
-        perSection[card.section].owned++;
+      for (const c of checklist) {
+        const count = collection[c.number] || 0;
+        if (count >= 1) {
+          owned++;
+          if (c.team && c.section === 'team') perTeam[c.team].owned++;
+          perSection[c.section].owned++;
+        } else if (reserved[c.number]) {
+          if (c.team && c.section === 'team') perTeam[c.team].incoming++;
+          perSection[c.section].incoming++;
+        }
       }
 
       return {
@@ -772,7 +784,7 @@
         if (!cardVisible(c)) continue;
         grid.appendChild(renderTile(c));
       }
-      const stats = app.computeStats(checklist, collection);
+      const stats = app.computeStats(checklist, collection, reserved);
       ownedCountEl.textContent = stats.owned;
       ownedTotalEl.textContent = stats.total;
       ownedPctEl.textContent = stats.pct + '%';
@@ -784,12 +796,17 @@
       const summary = document.getElementById('summary');
       summary.textContent = '';
 
-      function row(kind, value, label, owned, total) {
+      function row(kind, value, label, owned, incoming, total) {
         const pct = total > 0 ? Math.round(100 * owned / total) : 0;
         const el = document.createElement('div');
         el.className = 'summary-row' + (kind === 'section' ? ' section' : '');
         if (filter.kind === kind && filter.value === value) el.classList.add('active');
-        if (total > 0 && owned === total) el.classList.add('complete');
+        // Complete via owned = green. Complete only via owned+incoming = orange.
+        // Partial rows show plain owned/total; incoming doesn't inflate the numerator.
+        const trulyComplete = total > 0 && owned === total;
+        const completeViaIncoming = !trulyComplete && total > 0 && owned + incoming === total;
+        if (trulyComplete) el.classList.add('complete');
+        else if (completeViaIncoming) el.classList.add('complete-incoming');
         el.dataset.kind = kind;
         el.dataset.value = value;
 
@@ -806,7 +823,7 @@
 
         const num = document.createElement('span');
         num.className = 'num';
-        num.textContent = owned + '/' + total;
+        num.textContent = (completeViaIncoming ? total : owned) + '/' + total;
 
         el.append(lbl, bar, num);
         return el;
@@ -822,7 +839,7 @@
         for (const [code, info] of teams) {
           const flag = app.teamFlag(code);
           const label = flag ? flag + ' ' + code : code;
-          summary.appendChild(row('team', code, label, info.owned, info.total));
+          summary.appendChild(row('team', code, label, info.owned, info.incoming, info.total));
         }
       }
 
@@ -835,7 +852,7 @@
         summary.appendChild(h);
         for (const s of sets) {
           const info = stats.perSection[s];
-          summary.appendChild(row('section', s, app.SECTION_LABELS[s], info.owned, info.total));
+          summary.appendChild(row('section', s, app.SECTION_LABELS[s], info.owned, info.incoming, info.total));
         }
       }
 
