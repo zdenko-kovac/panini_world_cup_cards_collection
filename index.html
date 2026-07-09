@@ -355,6 +355,7 @@
       <button type="button" class="chip" data-chip="missing">Missing</button>
       <button type="button" class="chip" data-chip="incoming">Incoming</button>
       <button type="button" class="chip" data-chip="doubles">Doubles</button>
+      <button type="button" class="chip" data-chip="giveaways" title="3+ copies — a spare to give away after keeping one and one to trade">Giveaways</button>
     </div>
     <details id="exportMenu" class="menu">
       <summary>Export ▾</summary>
@@ -728,6 +729,7 @@
       if (chip === 'missing' && (count >= 1 || isIncoming)) return false;
       if (chip === 'incoming' && !isIncoming) return false;
       if (chip === 'doubles' && count < 2) return false;
+      if (chip === 'giveaways' && count < 3) return false;
       // Search
       if (!app.matchesSearch(c, searchQuery)) return false;
       return true;
