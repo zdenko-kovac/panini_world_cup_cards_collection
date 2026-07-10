@@ -529,8 +529,8 @@
     formatDoublesList(checklist, collection) {
       const dbl = c => (collection[c.number] || 0) >= 2;
       const { groups, groupOrder } = this._groupByLabel(checklist, dbl);
-      const totalDoubles = checklist.filter(dbl).length;
-      const lines = [`Doubles — spare copies to trade (${totalDoubles}):`];
+      const totalSpares = checklist.reduce((sum, c) => sum + Math.max(0, (collection[c.number] || 0) - 1), 0);
+      const lines = [`Doubles — spare copies to trade (${totalSpares}):`];
       for (const label of groupOrder) {
         const parts = groups.get(label).map(n => {
           const spare = collection[n] - 1;   // keep one for the album

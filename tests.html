@@ -300,10 +300,11 @@ async function main() {
     ok(!out.includes('22 (×3)'), 'card #22 should not show total count (×3), only spare:\n' + out);
   });
 
-  t('doubles list header names spare-copies-to-trade semantics and count of doubled cards', () => {
+  t('doubles list header counts total SPARE copies (sum of count-1), not distinct doubled cards', () => {
     const collection = { "1": 2, "2": 3, "22": 1 };
+    // card #1: 1 spare, card #2: 2 spares, card #22: not a double → total 3 spares
     const out = app.formatDoublesList(checklist, collection);
-    ok(out.startsWith('Doubles — spare copies to trade (2):'), 'header wrong: ' + out.split('\n')[0]);
+    ok(out.startsWith('Doubles — spare copies to trade (3):'), 'header wrong: ' + out.split('\n')[0]);
   });
 
   t('missing list uses team name for team cards, section label for others', () => {
